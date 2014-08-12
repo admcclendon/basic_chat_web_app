@@ -1,0 +1,6 @@
+name: basic_chat_web_app
+description: A sample command-line application
+dependencies:
+  http_server: any
+  route: any
+  sqljocky: any
