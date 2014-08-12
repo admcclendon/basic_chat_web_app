@@ -48,23 +48,18 @@ void handleWebSocket(WebSocket ws)
         case 'login':
           if (userLogin(json['username']))
           {
-            connectedUsers.add(new ConnectedUser(ws, json['username']));
+            ConnectedUser newUser = new ConnectedUser(ws, json['username']);
+            connectedUsers.add(newUser);
+            connectedUsers.forEach((ConnectedUser u) { u.Notify("User " + json['username'] + " has joined!"); });
           }
           break;
         case 'logout':
           break;
         case 'message':
-          bool found = false;
-          num i;
-          for (i = 0; i < connectedUsers.length; i++)
-          {
-            if (connectedUsers[i].ws == ws)
-            {
-              found = true;
-              break;
-            }
-          }
-          connectedUsers.forEach((ConnectedUser u) { u.SendMessage(connectedUsers[i].username, "hello"); });
+          ConnectedUser user;
+          if ((user = findUser(ws)) != null)
+            connectedUsers.forEach((ConnectedUser u) { u.SendMessage(user.username, json['message']); });
+          else { /* user logged off? TODO: Send error response. */ }
           break;
       }
   }, onDone: () { 
@@ -72,16 +67,25 @@ void handleWebSocket(WebSocket ws)
     {
       if (connectedUsers[i].ws == ws)
       {
+        String userLeaving = connectedUsers[i].username;
         connectedUsers.removeAt(i);
+        connectedUsers.forEach((ConnectedUser u) { u.Notify("User " + userLeaving + " has left."); });
         break;
       }
     }
   });
 }
 
-void closeWebsocket(WebSocket ws)
+ConnectedUser findUser(WebSocket ws)
 {
-  
+  for (num i = 0; i < connectedUsers.length; i++)
+  {
+    if (connectedUsers[i].ws == ws)
+    {
+      return connectedUsers[i];
+    }
+  }
+  return null;
 }
 
 bool userLogin(String username)
@@ -94,11 +98,6 @@ bool userLogin(String username)
   return true;
 }
 
-void SendMessage(String message)
-{
-  connectedUsers.forEach((ConnectedUser u) { u.SendMessage("server", message); });
-}
-
 class ConnectedUser
 {
   String username;
@@ -109,5 +108,10 @@ class ConnectedUser
   void SendMessage(String from, String message)
   {
     this.ws.add(JSON.encode({'action': 'message', 'from': from, 'message': message}));
+  }
+  
+  void Notify(String message)
+  {
+    this.ws.add(JSON.encode({'action': 'notify', 'message': message}));
   }
 }
