@@ -20,11 +20,11 @@ void main() {
     ..directoryHandler = handleVirtualDirectory;
 
   // Bind the http server to serve up polymer_fun
-  HttpServer.bind(InternetAddress.LOOPBACK_IP_V4, 8080).then((server) {
-    server.listen((request){
-      vd.serveRequest(request);
-    });
-  });
+//  HttpServer.bind(InternetAddress.LOOPBACK_IP_V4, 8080).then((server) {
+//    server.listen((request){
+//      vd.serveRequest(request);
+//    });
+//  });
   
   HttpServer.bind(InternetAddress.LOOPBACK_IP_V4, port).then((server) {
     var router = new Router(server);
@@ -46,11 +46,16 @@ void handleWebSocket(WebSocket ws)
       switch (act)
       {
         case 'login':
+          ConnectedUser newUser = new ConnectedUser(ws, json['username']);
           if (userLogin(json['username']))
           {
-            ConnectedUser newUser = new ConnectedUser(ws, json['username']);
+            newUser.Login(true);
             connectedUsers.add(newUser);
             connectedUsers.forEach((ConnectedUser u) { u.Notify("User " + json['username'] + " has joined!"); });
+          }
+          else
+          {
+            newUser.Login(false);
           }
           break;
         case 'logout':
@@ -102,8 +107,20 @@ class ConnectedUser
 {
   String username;
   WebSocket ws;
+  bool isLoggedIn = false;
   
   ConnectedUser(this.ws, this.username);
+  
+  void Login(bool success)
+  {
+    isLoggedIn = success;
+    this.ws.add(JSON.encode({'action': 'login', 'result': success, 'username': username}));
+  }
+  
+  void Logout()
+  {
+    isLoggedIn = false;
+  }
   
   void SendMessage(String from, String message)
   {
